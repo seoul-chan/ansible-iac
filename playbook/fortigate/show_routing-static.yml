@@ -67,3 +67,4 @@
 
 
 # OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES ansible-playbook ./playbook/fortigate/show_routing-static.yml -i ./inventory/forti_hosts
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/uri_module.html
