@@ -1,0 +1,57 @@
+---
+  - name: FortiGate IPsec VPN Phase1 Interface 생성
+    hosts: hq
+    vars_files:
+      - ../../inventory/group_vars/fortigate.yml
+      - ../../vars/forti_vars.yml
+
+    connection: httpapi
+    gather_facts: no
+    
+    collections:
+      - fortinet.fortios
+
+    tasks:
+      - name: Phase1 인터페이스 생성
+        fortios_vpn_ipsec_phase1_interface:
+          vdom: "root"
+          access_token: "{{ fortios_access_token }}"
+          vpn_ipsec_phase1_interface:
+            name: "{{ item.vpn_name }}"
+            interface: "{{ interface }}"
+            remote_gw: "{{ item.remote_gw }}"
+            psksecret: "{{ psk }}"
+            proposal: "{{ proposal }}"
+            dhgrp: "{{ dhgrp }}"
+            ike_version: "2"
+            keylife: "86400"
+            dpd: "on-demand"
+            dpd_retryinterval: "20"
+            dpd_retrycount: "3"
+            net_device: "enable"   # Device creation 옵션 활성화
+            # comments: "Ansible로 생성된 Phase1"
+          state: "present"        # present: 생성/갱신, absent: 제거
+        loop: "{{ vpn_object }}"
+        ignore_errors: true
+
+      - name: Phase2 생성
+        fortios_vpn_ipsec_phase2_interface:
+          vdom: "root"
+          access_token: "{{ fortios_access_token }}"
+          vpn_ipsec_phase2_interface:
+            name: "{{ item.vpn_name }}"
+            phase1name: "{{ item.vpn_name }}"
+            proposal: "{{ proposal }}"
+            pfs: "enable"
+            dhgrp: "{{ dhgrp }}"
+            keylifeseconds: "43200"
+            auto_negotiate: "enable"
+            # comments: "Ansible로 생성된 Phase2"
+          state: "present"        # present: 생성/갱신, absent: 제거
+        loop: "{{ vpn_object }}"
+
+      
+
+# OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES ansible-playbook ./playbook/fortigate/create_ipsec-tunnel-hq.yml -i ./inventory/forti_hosts
+# https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_vpn_ipsec_phase1_module.html#ansible-collections-fortinet-fortios-fortios-vpn-ipsec-phase1-module
+# https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_vpn_ipsec_phase2_module.html#ansible-collections-fortinet-fortios-fortios-vpn-ipsec-phase2-module
