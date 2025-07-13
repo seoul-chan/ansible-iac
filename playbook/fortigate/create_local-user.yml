@@ -1,0 +1,43 @@
+---
+  - name: Fortigate 로컬 유저 및 그룹 생성
+    hosts: hq
+    vars_files:
+      - ../../inventory/group_vars/fortigate.yml
+      - ../../vars/forti_vars.yml
+    connection: httpapi
+    gather_facts: no
+
+    collections:
+      - fortinet.fortios
+
+    tasks:
+      - name: Local User 계정 추가
+        fortinet.fortios.fortios_user_local:
+          vdom: "root"
+          access_token: "{{ fortios_access_token }}"
+          state: "present"      # present: 생성/갱신, absent: 제거
+          user_local:
+            name: "{{item.user_name}}"
+            type: "password"
+            passwd: "{{item.password}}"
+            two_factor: "email"   # two factor 적용
+            email_to: "{{item.user_name}}"
+            status: "enable"
+        loop: "{{ local_user_object }}"
+
+      # - name: Local User Group 추가
+      #   fortinet.fortios.fortios_user_group:
+      #     vdom: "root"
+      #     access_token: "{{ fortios_access_token }}"
+      #     state: "present"      # present: 생성/갱신, absent: 제거
+      #     user_group:
+      #       name: "{{local_user_group_name}}"
+      #       group_type: "firewall"
+      #       member:             # 기존 group에 member가 추가되는 형식이 아닌 작성된 맴버로 덮어쓰는 방식, !!주의 필요!!
+      #         - name: "{{item.user_name}}"
+      #   loop: "{{ local_user_object }}"
+
+
+# ansible-playbook ./playbook/fortigate/create_local-user.yml -i ./inventory/forti_hosts
+# https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_user_local_module.html#ansible-collections-fortinet-fortios-fortios-user-local-module
+# https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_user_group_module.html#ansible-collections-fortinet-fortios-fortios-user-group-module
