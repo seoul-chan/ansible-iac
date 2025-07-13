@@ -1,0 +1,27 @@
+---
+  - name: save show run acl output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - ../../inventory/group_vars/dell.yml    
+    gather_facts: no
+    collections:
+      - dellemc.os9
+
+    tasks:
+      - name: run show running-config acl on remote devices
+        dellos9_command:
+          commands: show running-config
+        register: show_run_output
+
+      - name: create directory for show running-config output
+        file:
+          path: "{{path}}/show_run"
+          state: directory
+
+      - name: save show running-config acl output to file
+        copy:
+          content: "{{ show_run_output.stdout[0] }}"
+          dest: "{{path}}/show_run/{{ inventory_hostname }}.txt"
+
+# playbook 실행 (상대)경로는 터미널 실행 위치에 따라 다름
+# ansible-playbook -i ./inventory/dellprod_hosts ./playbook/dellsw/show_run.yml

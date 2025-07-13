@@ -1,0 +1,19 @@
+---
+- name: dell Add administrator accounts
+  hosts: all
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - ../../inventory/group_vars/dell.yml  
+  gather_facts: no
+
+  collections:
+   - dellemc.os9
+  
+  tasks:
+    - name: configuration add ACL
+      dellos9_config:
+        lines:
+          - seq 12 permit 172.25.251.0/24
+          # - no permit host 172.20.16.30
+          # - seq 50 deny any log
+        parents: ['ip access-list standard MGMT']
+        save: yes
