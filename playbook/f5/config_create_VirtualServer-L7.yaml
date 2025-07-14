@@ -1,0 +1,63 @@
+---
+- name: Create Service
+  hosts: all
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - ../../inventory/group_vars/f5.yml
+    - ../../vars/f5_vars.yml 
+  connection: local
+  gather_facts: no
+
+  collections:
+   - f5networks.f5_modules
+  
+  tasks:
+      - name: Create pool                     # pool 생성
+        bigip_pool:
+          name: "{{pool_name}}"               # Pool Name
+          description: "{{description}}"
+          monitors: /Common/m_tcp_3_10        # Health Check : HTTP_Health-200 / HTTP_Healthdo-200 / m_tcp_3_10
+          service_down_action: reset
+          lb_method: least-connections-member # Method : Leastcon / RoundRobin ...
+          provider: '{{ f5_provider }}'
+        delegate_to: localhost
+
+      - name: Add pool-member                 # pool 에 멤버 추가
+        bigip_pool_member:
+          host: "{{ item.node }}"             # loop문 사용 시 해제
+          pool: "{{pool_name}}"
+          port: "{{pool_port}}"
+          provider: '{{ f5_provider }}'
+        delegate_to: localhost
+        loop: '{{node_list}}'
+
+      - name: Create virtual-server           # vip 생성 standard
+        bigip_virtual_server:
+          destination: "{{vip}}"              # VIP
+          type: standard
+          description: "{{description}}"
+          name: "{{vname}}"
+          port: "{{vport}}"
+          pool: "{{pool_name}}"
+          snat: "/Common/SNAT_{{SNAT_IP}}"    # SNAT
+          ip_protocol: tcp
+          profiles:
+            - tcp_300     # client side 지정, server side는 client side와 동일
+            - http_web
+            # - name: tcp_300
+            #   context: client-side
+            # - name: udp
+            #   context: server-side
+            # - name: http_test
+            #   context: client-side
+            # - name: http_web
+            #   context: client-side
+            # - http_X-Forwarded
+            - name: clientssl_prod_multi_hanatour    # clientssl_prod_multi_hanatour / DEV: clientssl_multi_hanatour
+              context: client-side
+          # default_persistence_profile: /Common/src_persistence_300
+          state: present                      # present(생성), absent(제거)
+          provider: '{{ f5_provider }}'
+        delegate_to: localhost
+
+# https://docs.ansible.com/ansible/latest/collections/f5networks/f5_modules/bigip_pool_module.html#ansible-collections-f5networks-f5-modules-bigip-pool-module
+# https://docs.ansible.com/ansible/latest/collections/f5networks/f5_modules/bigip_virtual_server_module.html#ansible-collections-f5networks-f5-modules-bigip-virtual-server-module

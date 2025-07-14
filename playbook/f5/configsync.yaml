@@ -1,0 +1,20 @@
+---
+- name: user_add
+  hosts: all
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - ../../inventory/group_vars/f5.yml
+  connection: local
+  gather_facts: no
+
+  collections:
+   - f5networks.f5_modules
+  
+  tasks:
+    - name: Sync configuration from device to group
+      bigip_configsync_action:
+        provider: '{{ f5_provider }}'
+        device_group: DG
+        sync_device_to_group: yes
+      delegate_to: localhost
+
+# https://docs.ansible.com/ansible/latest/collections/f5networks/f5_modules/bigip_configsync_action_module.html

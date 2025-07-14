@@ -1,0 +1,78 @@
+---
+- name: show_vip_pool_member_status
+  hosts: all
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - /etc/ansible/inventory/group_vars/f5.yml
+  connection: local
+  gather_facts: no
+
+  collections:
+   - f5networks.f5_modules
+  
+  tasks:
+    - name: Collect pool info
+      bigip_device_info:
+        gather_subset:
+          - ltm-pools                       # Pool 정보 수집
+        provider: "{{ f5_provider }}"
+      delegate_to: localhost
+      register: device_pools                # Pool 정보 device_pools 변수에 저장
+    
+    - name: Collect virtual-server info
+      bigip_device_info:
+        gather_subset:
+          - virtual-servers                 # Virtual Server 정보 수집
+        provider: "{{ f5_provider }}"
+      delegate_to: localhost
+      register: device_virt                 # Virtual Server 정보 device_virt 변수에 저장
+
+    - name: Prepare data for CSV
+      set_fact:
+        csv_lines: |
+          Virtual Server Name,Virtual Server IP,Virtual Server Port,Pool Name,Pool Member Address,Pool Member Port,Member State
+          {% for virt in device_virt['virtual_servers'] %}
+            {% if 'default_pool' in virt and virt.default_pool %}
+              {% set pool_name_parts = virt.default_pool.split('/') %}
+              {% set pool_name = pool_name_parts[-1] %}
+
+              {% set pool = (device_pools['ltm_pools'] | selectattr('name', 'equalto', pool_name) | first) %}
+              
+              {% if pool %}
+                {% if 'members' in pool and pool.members %}
+                  {% for member in pool.members %}
+                    {% set member_port_parts = member.name.split(':') %}
+                    {% set member_port = member_port_parts[-1] %}
+
+                    {% if loop.first %}
+                    {{ virt.name }},{{ virt.destination_address }},{{ virt.destination_port }},{{ pool.name }},{{ member.address }},{{ member_port }},{{ member.real_state }}
+                    {% else %}
+                      -,{{ virt.destination_address }},-,-,{{ member.address }},{{ member_port }},{{ member.real_state }}
+                    {% endif %}
+                    
+                  {% endfor %}
+                  {% else %}
+                    {{ virt.name }},{{ virt.destination_address }},{{ virt.destination_port }},{{ pool.name }},None,None,None
+                {% endif %}
+              {% endif %}
+              
+              {% else %}
+                {{ virt.name }},{{ virt.destination_address }},{{ virt.destination_port }},None,None,None,None
+            {% endif %}
+          {% endfor %}
+
+    - name: create directory
+      file:
+        path: "{{path}}/"
+        state: directory
+
+    - name: Save CSV file
+      copy:
+        content: "{{ csv_lines | replace('\n\n', '\n') | trim }}"
+        dest: "{{path}}/{{ inventory_hostname}}_show_vip_pool_status.csv"
+
+    # 변수 출력 내용 확인 시
+    # - name: Display current status of pool members for pool.
+    #   debug: 
+    #     msg: "{{device_pools}}"
+
+# https://docs.ansible.com/ansible/latest/collections/f5networks/f5_modules/bigip_device_info_module.html#bigip-device-facts-module
