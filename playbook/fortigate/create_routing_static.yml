@@ -1,0 +1,30 @@
+---
+- name: Fortigate Static Rouing 생성
+  hosts: branch
+  vars_files:
+    - ../../inventory/group_vars/fortigate.yml
+    - ../../vars/forti_vars.yml
+  connection: httpapi
+  gather_facts: false
+  collections:
+      - fortinet.fortios
+
+  tasks:
+    - name: Configure Static Route
+      fortinet.fortios.fortios_router_static:
+        vdom: "root"
+        access_token: "{{ fortios_access_token }}"
+        state: "absent"                  # present: 생성/갱신, absent: 제거
+        router_static:
+          seq_num: "{{ item.seq_num }}"
+          dst: "{{ item.dst }}"
+          gateway: "{{ item.gateway }}"
+          device: "{{ item.device }}"
+          distance: "{{ item.distance }}"
+          priority: "{{ item.priority }}"
+          comment: "{{ item.comment }}"
+      loop: "{{ static_routes_labs4F }}"
+
+
+# OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES ansible-playbook ./playbook/fortigate/create_routing_static.yml -i ./inventory/forti_hosts
+# https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_router_static_module.html
