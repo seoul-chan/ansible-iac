@@ -1,0 +1,29 @@
+---
+- name: Add administrator accounts
+  hosts: main-paloalto
+  connection: local
+  gather_facts: no
+
+  collections:
+    - paloaltonetworks.panos
+  
+  tasks:
+
+  # user 삭제
+  - name: configure user delete
+    panos_administrator:
+      provider: '{{ palo_provider }}'
+      admin_username: '{{ id_username }}'
+      state: 'absent'
+      commit: False
+  
+  # 작업 상태 확인
+  - name: check if ready
+    panos_check:
+      provider: '{{ palo_provider }}'
+      timeout: 0
+
+  # commit 진행
+  - name: commit config on firewall
+    panos_commit_firewall:
+      provider: '{{ palo_provider }}'

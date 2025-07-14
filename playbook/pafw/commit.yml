@@ -1,0 +1,22 @@
+---
+- name: Add administrator accounts
+  hosts: all
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - ../../inventory/group_vars/paloalto.yml
+  connection: local
+  gather_facts: no
+
+  collections:
+    - paloaltonetworks.panos
+  
+  tasks:
+    # 작업 상태 확인
+    - name: check if ready
+      panos_check:
+        provider: '{{ palo_provider }}'
+        timeout: 0
+
+    # commit 진행
+    - name: commit config on firewall
+      panos_commit_firewall:
+        provider: '{{ palo_provider }}'
