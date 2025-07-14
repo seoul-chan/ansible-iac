@@ -1,0 +1,26 @@
+---
+  - name: save show log output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - ../../inventory/group_vars/cisco.yml
+    gather_facts: no
+
+    tasks:
+      - name: run show log on remote devices
+        ios_command:
+          commands: show log
+        register: show_log_output
+      
+      # - debug: 
+      #     var: show_log_output.stdout
+      
+      - name: create directory for show log output
+        file:
+          path: "{{path}}/show_log"
+          state: directory
+
+      - name: save show log output to file
+        copy:
+          content: "### {{ inventory_hostname }} ###\n\n
+          {{ show_log_output.stdout[0] }}"
+          dest: "{{path}}/show_log/{{ inventory_hostname }}_show_log.txt"

@@ -1,0 +1,31 @@
+---
+- name: user_add
+  hosts: all
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - ../../inventory/group_vars/cisco.yml
+  gather_facts: no
+
+  collections:
+    - cisco.ios
+  
+  tasks:
+    - name: configuration user add
+      ios_config:
+        lines:
+          - username {{ add_username }} privilege 15 secret {{ add_password }}
+        save_when: always
+        
+    # 유저 제거 시 아래 주석 해제
+    # - name: Delete a user account
+    #   ios_user:
+    #     name: "chan"
+    #     state: absent
+    # - name: Running config saving...
+    #   icx_config:      
+    #     save_when: always
+
+  # cisco.ios.ios_config module
+  # https://docs.ansible.com/ansible/latest/collections/cisco/ios/ios_config_module.html
+
+  # cisco.ios.ios_user module
+  # https://docs.ansible.com/ansible/latest/collections/cisco/ios/ios_user_module.html

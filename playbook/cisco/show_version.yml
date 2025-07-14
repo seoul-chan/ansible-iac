@@ -1,0 +1,26 @@
+---
+  - name: save show version output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - ../../inventory/group_vars/cisco.yml
+    gather_facts: no
+
+    tasks:
+      - name: run show version on remote devices
+        ios_command:
+          commands: show version
+        register: show_version_output
+      
+      # - debug: 
+      #     var: show_version_output.stdout
+      
+      - name: create directory for show version output
+        file:
+          path: "{{path}}/show_run"
+          state: directory
+
+      - name: save show version output to file
+        copy:
+          content: "### {{ inventory_hostname }} ###\n\n
+          {{ show_version_output.stdout[0] }}"
+          dest: "{{path}}/show_version/{{ inventory_hostname }}_show_version.txt"

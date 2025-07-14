@@ -1,0 +1,26 @@
+---
+  - name: save show interface output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - ../../inventory/group_vars/cisco.yml
+    gather_facts: no
+
+    tasks:
+      - name: run show interface on remote devices
+        ios_command:
+          commands: show interface status
+        register: show_interface_output
+      
+      # - debug: 
+      #     var: show_interface_output.stdout
+      
+      - name: create directory for show interface output
+        file:
+          path: "{{path}}/show_interface"
+          state: directory
+
+      - name: save show interface output to file
+        copy:
+          content: "### {{ inventory_hostname }} ###\n\n
+          {{ show_interface_output.stdout[0] }}"
+          dest: "{{path}}/show_interface/{{ inventory_hostname }}_show_interface.txt"
