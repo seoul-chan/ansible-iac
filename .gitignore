@@ -1,0 +1,6 @@
+*.cfg
+.lock
+inventory/
+result/
+vars/
+python/
