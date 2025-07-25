@@ -1,0 +1,34 @@
+---
+  - name: Fortigate System User 계정 생성
+    hosts: hq
+    vars_files:
+      - ../../inventory/group_vars/fortigate.yml.
+      - ../../vars/forti_vars.yml
+    connection: httpapi
+    gather_facts: no
+
+    collections:
+      - fortinet.fortios
+
+    tasks:
+      - name: System User 계정 추가
+        fortinet.fortios.fortios_system_admin:
+          vdom: "root"
+          access_token: "{{ fortios_access_token }}"
+          state: "present"      # present: 생성/갱신, absent: 제거
+          system_admin:
+            name: "{{system_admin_name}}"
+            password: "{{system_password}}"
+            accprofile: "super_admin"   # super_admin profile 선택은 super_admin 계정에서만 선택 가능, ansible 계정은 super_admin 권한 설정 불가 -> super_admin profile 선택불가
+            vdom:
+              - name: "root"
+            trusthost1: "{{trusthost1}}"
+            trusthost2: "{{trusthost2}}"
+            trusthost3: "{{trusthost3}}"
+            trusthost4: "{{trusthost4}}"
+            trusthost5: "{{trusthost5}}"
+            trusthost6: "{{trusthost6}}"
+            trusthost7: "{{trusthost7}}"
+            comments: "Created by Ansible"
+
+# ansible-playbook ./playbook/fortigate/create_system-user.yml -i ./inventory/forti_hosts
