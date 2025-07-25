@@ -11,7 +11,7 @@
       - fortinet.fortios
 
     tasks:
-      - name: Local User 계정 추가
+      - name: Local User 계정 추가 (SSLVPN)
         fortinet.fortios.fortios_user_local:
           vdom: "root"
           access_token: "{{ fortios_access_token }}"
@@ -36,7 +36,18 @@
           # cc: "{{ mail_cc }}"         # 참조
           bcc: "{{ mail_bcc }}"         # 숨은 참조
           subject: "{{ subject }}"      # 제목
-          body: "{{ body }}"            # 본문
+          body: |
+            안녕하세요.
+            에어프레미아 인프라팀입니다.
+
+            SSLVPN 접속 계정/패스워드 공유 드립니다.
+            설치는 첨부 드린 가이드 참고 부탁 드립니다.
+
+            - username: {{item.user_name}}
+            - Passwd: {{item.password}}
+            - e-mail 2차 인증 필요
+
+            감사합니다.
           subtype: plain
           attach:
             - "{{ attachment_file }}"
@@ -45,6 +56,6 @@
         delegate_to: localhost
 
 
-# ansible-playbook ./playbook/fortigate/create_local-user_send-email.yml -i ./inventory/forti_hosts
+# OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES ansible-playbook ./playbook/fortigate/create_local-user_send-email.yml -i ./inventory/forti_hosts
 # https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_user_local_module.html#ansible-collections-fortinet-fortios-fortios-user-local-module
 # https://docs.ansible.com/ansible/latest/collections/fortinet/fortios/fortios_user_group_module.html#ansible-collections-fortinet-fortios-fortios-user-group-module
