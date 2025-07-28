@@ -5,25 +5,36 @@
       - ../../inventory/group_vars/fortigate.yml
       - ../../vars/forti_vars.yml
     connection: httpapi
-    gather_facts: no
+    gather_facts: false
 
     collections:
       - fortinet.fortios
 
     tasks:
+      - name: Generate random 10-character password
+        ansible.builtin.set_fact:
+          enriched_local_user_object: "{{ enriched_local_user_object | default([]) + [{
+            'user_name': item.user_name,
+            'password': lookup('password', '/dev/null length=10 chars=ascii_letters,digits') }] }}"
+        loop: "{{ local_user_object }}"
+
+      - name: 사용자 및 패스워드 확인 (디버그)
+        ansible.builtin.debug:
+          var: enriched_local_user_object
+
       - name: Local User 계정 추가 (SSLVPN)
         fortinet.fortios.fortios_user_local:
           vdom: "root"
           access_token: "{{ fortios_access_token }}"
           state: "present"      # present: 생성/갱신, absent: 제거
           user_local:
-            name: "{{item.user_name}}"
+            name: "{{ item.user_name }}"
             type: "password"
-            passwd: "{{item.password}}"
+            passwd: "{{ item.password }}"
             two_factor: "email"   # two factor 적용
-            email_to: "{{item.user_name}}"
+            email_to: "{{ item.user_name }}"
             status: "enable"
-        loop: "{{ local_user_object }}"
+        loop: "{{ enriched_local_user_object }}"
 
       - name: SES SMTP로 이메일 전송
         community.general.mail:
@@ -31,8 +42,8 @@
           port: "{{ smtp_port }}"
           username: "{{ smtp_username }}"
           password: "{{ smtp_password }}"
-          from: "{{mail_from}}"         # 보내는 사람
-          to: "{{item.user_name}}"      # 받는 사람
+          from: "{{ mail_from }}"         # 보내는 사람
+          to: "{{ item.user_name }}"      # 받는 사람
           # cc: "{{ mail_cc }}"         # 참조
           bcc: "{{ mail_bcc }}"         # 숨은 참조
           subject: "{{ subject }}"      # 제목
@@ -43,8 +54,8 @@
             SSLVPN 접속 계정/패스워드 공유 드립니다.
             설치는 첨부 드린 가이드 참고 부탁 드립니다.
 
-            - username: {{item.user_name}}
-            - Passwd: {{item.password}}
+            - username: {{ item.user_name }}
+            - Passwd: {{ item.password }}
             - e-mail 2차 인증 필요
 
             감사합니다.
@@ -52,7 +63,7 @@
           attach:
             - "{{ attachment_file }}"
           secure: starttls
-        loop: "{{ local_user_object }}"
+        loop: "{{ enriched_local_user_object }}"
         delegate_to: localhost
 
 
