@@ -1,0 +1,27 @@
+---
+  - name: save show run users output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - ../../inventory/group_vars/dell.yml
+    gather_facts: no
+    vars:
+      folder: show_run_users
+      file_name: "{{ lookup('pipe', 'date +%Y%m%d') }}_{{ inventory_hostname }}"
+    collections:
+      - dellemc.os9
+
+    tasks:
+      - name: run show run users on remote devices
+        dellos9_command:
+          commands: show run users
+        register: show_run_users_output
+
+      - name: create directory for show run users output
+        file:
+          path: "{{path}}/{{folder}}"
+          state: directory
+
+      - name: save show run users output to file
+        copy:
+          content: "{{ show_run_users_output.stdout[0] }}"
+          dest: "{{path}}/{{folder}}/{{ file_name }}.txt"
