@@ -1,0 +1,25 @@
+---
+  - name: save show version output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - /../../inventory/group_vars/ruckus.yml
+    gather_facts: no
+      
+    tasks:
+      - name: Load new acl into device
+        icx_config:
+          lines:
+            - seq 10 permit host 192.0.2.1 log
+            - seq 20 permit host 192.0.2.2 log
+            - seq 30 permit host 192.0.2.3 log
+          parents: ip access-list standard 99
+          before: no ip access-list standard 99
+          match: exact
+
+      # - name: Remove ACL...
+      #   icx_config: 
+      #     lines: no ip access-list standard 99
+
+      - name: Running config saving...
+        icx_config:      
+          save_when: always

@@ -1,0 +1,29 @@
+---
+  - name: save show version output
+    hosts: all
+    vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+      - /../../inventory/group_vars/ruckus.yml
+    gather_facts: no
+    vars:
+      folder: show_version
+      file_name: "{{ lookup('pipe', 'date +%Y%m%d') }}_{{ inventory_hostname }}"
+      
+    tasks:
+      - name: Run show version on remote devices
+        icx_command:
+          commands: 
+            - show run | inc hostname
+            - show version
+        register: result
+
+      # - debug: var=result.stdout_lines
+
+      - name: create directory for show version output
+        file:
+          path: "{{path}}/{{folder}}"
+          state: directory
+
+      - name: save show version output to file
+        copy:
+          content: "{{ result.stdout[0] }}\n\n{{ result.stdout[1] }}"
+          dest: "{{path}}/{{folder}}/{{ file_name }}.txt"
