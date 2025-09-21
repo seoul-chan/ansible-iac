@@ -1,0 +1,43 @@
+---
+- name: Add administrator accounts
+  hosts: xxx
+  vars_files: # 변수 파일 지정, 미 사용시 인벤토리 호스트 그룹명과 group_vars 파일명이 일치하는 파일 자동매칭 사용
+    - ../../inventory/group_vars/paloalto.yml
+  connection: local
+  gather_facts: no
+
+  vars:
+    - ike_name: xxx
+    - ipsec_name: xxx
+      
+  collections:
+    - paloaltonetworks.panos
+  
+  tasks:
+    # IKE run command
+    - name: Test VPN IKE SA for a specific gateway
+      panos_op:
+        provider: '{{ palo_provider }}'
+        cmd: 'test vpn ike-sa gateway {{ike_name}}'
+      register: ike_result
+      loop: "{{ range(3) | list}}"
+      
+    - name: Display result
+      debug:
+        var: ike_result.stdout
+
+    # IPSEC run command
+    - name: Test VPN IPSEC SA for a specific tunnel
+      panos_op:
+        provider: '{{ palo_provider }}'
+        cmd: 'test vpn ipsec-sa tunnel {{ipsec_name}}'
+      register: ipsec_result
+      loop: "{{ range(3) | list }}"
+
+    - name: Display result
+      debug:
+        var: ipsec_result.stdout
+
+# =========== Command Line =============== #
+# ansible-playbook ./playbook/pafw/excute_vpn_tunnel_restart.yaml
+
