@@ -1,5 +1,5 @@
 ---
-- name: Fortigate IPsecVPN 목록 확인
+- name: Fortigate Static Routing 목록 확인
   hosts: all
   vars_files:
     - ../../inventory/group_vars/fortigate.yml
@@ -55,13 +55,13 @@
     - name: Create directory for show route output
       ansible.builtin.file:
         path: "{{path}}/{{folder}}"
-        mode: "0755"
+        # mode: "0755"
         state: directory
 
     - name: Save route list
       ansible.builtin.copy:
         content: "{{ routing_table | trim }}"
-        mode: "0644"
+        # mode: "0644"
         dest: "{{ path }}/{{ folder }}/{{ file_name }}.txt"
         # dest: "{{ path }}/{{ folder }}/{{ file_name }}.csv"
 
