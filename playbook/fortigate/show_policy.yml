@@ -1,0 +1,85 @@
+---
+- name: Get FortiGate firewall policy (using API/uri)
+  hosts: branch
+  vars_files:
+    - ../../inventory/group_vars/fortigate.yml
+  connection: httpapi
+  gather_facts: false
+  vars:
+    folder: policy
+
+  tasks:
+    - name: Query FortiGate firewall policy API
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}/api/v2/cmdb/firewall/policy?vdom=root"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ fortios_access_token }}"
+        validate_certs: false  # SSL 인증서 검증 비활성화
+        return_content: true   # 결과를 JSON으로 받음
+      register: policy_api_result
+
+    # ===== debug 확인 시 =====
+    # - name: Print policy API results (List)
+    #   debug:
+    #     var: policy_api_result.json.results
+    #   when: policy_api_result.json.results is defined
+    
+    # ===== txt 파일로 저장 시 =====
+    # - name: Format policy list as text
+    #   ansible.builtin.set_fact:
+    #     # 변수 이름을 policy_report_text로 변경
+    #     policy_report: |
+    #       Firewall Policies for {{ inventory_hostname }}
+    #       ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #       {{ "%-6s %-30s %-8s %-30s %-25s %-25s %-25s %-25s %-25s %-8s %-20s" | format("ID", "NAME", "ACTION", "COMMENTS", "SRC ADDR", "SRC INTF", "DST ADDR", "DST INTF", "SERVICE", "NAT", "NAT IP") }}
+    #       ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+    #       {% for policy in policy_api_result.json.results %}
+    #       {% set name = policy.name | default('N/A') %}
+    #       {% set comments = policy.comments | default('') %}
+    #       {# srcaddr, srcintf 등은 리스트이므로 'name' 속성을 추출하여 공백으로 join #}
+    #       {% set srcaddr_list = policy.srcaddr | map(attribute='name') | join(' ') %}
+    #       {% set srcintf_list = policy.srcintf | map(attribute='name') | join(' ') %}
+    #       {% set dstaddr_list = policy.dstaddr | map(attribute='name') | join(' ') %}
+    #       {% set dstintf_list = policy.dstintf | map(attribute='name') | join(' ') %}
+    #       {% set service_list = policy.service | map(attribute='name') | join(' ') %}
+    #       {{ "%-6s %-30s %-8s %-30s %-25s %-25s %-25s %-25s %-25s %-8s %-20s" | format(policy.policyid, name, policy.action, comments, srcaddr_list, srcintf_list, dstaddr_list, dstintf_list, service_list, policy.nat, policy.natip) }}
+    #       {% endfor %}
+    
+    # ===== CSV 파일로 저장 시 =====
+    - name: Format policy list as CSV
+      ansible.builtin.set_fact:
+        policy_report: |
+          policyid,name,srcintf,dstintf,srcaddr,dstaddr,service,action,nat,natip,comments
+          {% for policy in policy_api_result.json.results %}
+          {# ===== 콤마(,)가 포함될 수 있는 name, comments 필드는 큰따옴표로 감쌉니다. ===== #}
+          {% set name = '"' + (policy.name | default('N/A')) + '"' %}
+          {% set comments = '"' + (policy.comments | default('')) + '"' %}
+          {# ===== srcaddr 등 리스트 형태의 객체는 'name'만 추출하여 공백으로 join합니다. =====#}
+          {% set srcaddr_list = policy.srcaddr | map(attribute='name') | join('\n') %}
+          {% set srcintf_list = policy.srcintf | map(attribute='name') | join('\n') %}
+          {% set dstaddr_list = policy.dstaddr | map(attribute='name') | join('\n') %}
+          {% set dstintf_list = policy.dstintf | map(attribute='name') | join('\n') %}
+          {% set service_list = policy.service | map(attribute='name') | join('\n') %}
+          {# ===== 리스트로 변환된 값도 따옴표로 감싸 CSV 형식을 유지합니다. ===== #}
+          {% set srcaddr_csv = '"' + srcaddr_list + '"' %}
+          {% set srcintf_csv = '"' + srcintf_list + '"' %}
+          {% set dstaddr_csv = '"' + dstaddr_list + '"' %}
+          {% set dstintf_csv = '"' + dstintf_list + '"' %}
+          {% set service_csv = '"' + service_list + '"' %}
+          {# 5. 모든 변수를 쉼표(,)로 연결하여 CSV의 한 줄을 완성합니다. #}
+          {{ [ policy.policyid, name, srcintf_csv, dstintf_csv, srcaddr_csv, dstaddr_csv, service_csv, policy.action, policy.nat, policy.natip, comments ] | join(',') }}
+          {% endfor %}
+
+    - name: Create directory for show route output
+      ansible.builtin.file:
+        path: "{{path}}/{{folder}}"
+        state: directory
+
+    - name: Save route list
+      ansible.builtin.copy:
+        content: "{{ policy_report | trim }}"
+        # dest: "{{ path }}/{{ folder }}/{{ file_name }}.txt"
+        dest: "{{ path }}/{{ folder }}/{{ file_name }}.csv"
+
+# OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES ansible-playbook ./playbook/fortigate/show_policy.yml -i ./inventory/forti_hosts
