@@ -28,24 +28,48 @@
     # ===== txt 파일로 저장 시 =====
     # - name: Format policy list as text
     #   ansible.builtin.set_fact:
-    #     # 변수 이름을 policy_report_text로 변경
+    #     # 변수 이름은 제공된 코드(policy_report)를 따릅니다.
     #     policy_report: |
     #       Firewall Policies for {{ inventory_hostname }}
     #       ----------------------------------------------------------------------------------------------------------------------------------------------------------------
     #       {{ "%-6s %-30s %-8s %-30s %-25s %-25s %-25s %-25s %-25s %-8s %-20s" | format("ID", "NAME", "ACTION", "COMMENTS", "SRC ADDR", "SRC INTF", "DST ADDR", "DST INTF", "SERVICE", "NAT", "NAT IP") }}
     #       ----------------------------------------------------------------------------------------------------------------------------------------------------------------
     #       {% for policy in policy_api_result.json.results %}
+    #       {# --- 1. 기본 정보 변수 설정 --- #}
     #       {% set name = policy.name | default('N/A') %}
     #       {% set comments = policy.comments | default('') %}
-    #       {# srcaddr, srcintf 등은 리스트이므로 'name' 속성을 추출하여 공백으로 join #}
-    #       {% set srcaddr_list = policy.srcaddr | map(attribute='name') | join(' ') %}
-    #       {% set srcintf_list = policy.srcintf | map(attribute='name') | join(' ') %}
-    #       {% set dstaddr_list = policy.dstaddr | map(attribute='name') | join(' ') %}
-    #       {% set dstintf_list = policy.dstintf | map(attribute='name') | join(' ') %}
-    #       {% set service_list = policy.service | map(attribute='name') | join(' ') %}
-    #       {{ "%-6s %-30s %-8s %-30s %-25s %-25s %-25s %-25s %-25s %-8s %-20s" | format(policy.policyid, name, policy.action, comments, srcaddr_list, srcintf_list, dstaddr_list, dstintf_list, service_list, policy.nat, policy.natip) }}
+
+    #       {# --- 2. 리스트 항목들을 'join'하지 않고 실제 리스트로 변환 --- #}
+    #       {% set srcaddr_items = policy.srcaddr | map(attribute='name') | list %}
+    #       {% set srcintf_items = policy.srcintf | map(attribute='name') | list %}
+    #       {% set dstaddr_items = policy.dstaddr | map(attribute='name') | list %}
+    #       {% set dstintf_items = policy.dstintf | map(attribute='name') | list %}
+    #       {% set service_items = policy.service | map(attribute='name') | list %}
+
+    #       {# --- 3. 항목 중 가장 긴 리스트의 길이를 계산 --- #}
+    #       {% set max_len = [srcaddr_items | length, srcintf_items | length, dstaddr_items | length, dstintf_items | length, service_items | length] | max %}
+
+    #       {# --- 4. 정책의 *첫 번째* 줄 출력 (각 리스트의 0번째 항목) --- #}
+    #       {% set srcaddr_0 = srcaddr_items[0] | default('') %}
+    #       {% set srcintf_0 = srcintf_items[0] | default('') %}
+    #       {% set dstaddr_0 = dstaddr_items[0] | default('') %}
+    #       {% set dstintf_0 = dstintf_items[0] | default('') %}
+    #       {% set service_0 = service_items[0] | default('') %}
+    #       {{ "%-6s %-30s %-8s %-30s %-25s %-25s %-25s %-25s %-25s %-8s %-20s" | format(policy.policyid, name, policy.action, comments, srcaddr_0, srcintf_0, dstaddr_0, dstintf_0, service_0, policy.nat, policy.natip) }}
+
+    #       {# --- 5. *두 번째* 항목부터(i=1) 최대 길이(max_len)까지 루프 실행 --- #}
+    #       {% for i in range(1, max_len) %}
+    #       {# --- 각 리스트의 i번째 항목을 가져오되, 없으면 빈 문자열('') 반환 --- #}
+    #       {% set srcaddr_i = srcaddr_items[i] | default('') %}
+    #       {% set srcintf_i = srcintf_items[i] | default('') %}
+    #       {% set dstaddr_i = dstaddr_items[i] | default('') %}
+    #       {% set dstintf_i = dstintf_items[i] | default('') %}
+    #       {% set service_i = service_items[i] | default('') %}
+    #       {# --- ID, Name 등은 비우고, 항목들만 정해진 자리에 들여써서 출력 --- #}
+    #       {{ "%-6s %-30s %-8s %-30s %-25s %-25s %-25s %-25s %-25s %-8s %-20s" | format('', '', '', '', srcaddr_i, srcintf_i, dstaddr_i, dstintf_i, service_i, '', '') }}
     #       {% endfor %}
-    
+    #       {% endfor %}
+
     # ===== CSV 파일로 저장 시 =====
     - name: Format policy list as CSV
       ansible.builtin.set_fact:
