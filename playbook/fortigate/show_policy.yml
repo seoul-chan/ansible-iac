@@ -24,7 +24,7 @@
     #   debug:
     #     var: policy_api_result.json.results
     #   when: policy_api_result.json.results is defined
-    
+
     # ===== txt 파일로 저장 시 =====
     # - name: Format policy list as text
     #   ansible.builtin.set_fact:
